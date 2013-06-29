@@ -173,39 +173,47 @@ func (c *Client) authenticate() error {
 
 func (c *Client) listen() {
 	for {
-		element, err := c.connection.Next()
+		/*
+			element, err := c.connection.Next()
+			if err != nil {
+				return
+			}
+
+			switch element.Name.Local + element.Name.Space {
+			case "iq" + xmpp.NsJabberClient: // rooms and rosters
+				query := c.connection.Query()
+				switch query.XMLName.Space {
+				case xmpp.NsDisco:
+					items := make([]*Room, len(query.Items))
+					for i, item := range query.Items {
+						items[i] = &Room{Id: item.Jid, Name: item.Name}
+					}
+					c.receivedRooms <- items
+				case xmpp.NsIqRoster:
+					items := make([]*User, len(query.Items))
+					for i, item := range query.Items {
+						items[i] = &User{Id: item.Jid, Name: item.Name, MentionName: item.MentionName}
+					}
+					c.receivedUsers <- items
+				}
+			case "message" + xmpp.NsJabberClient:
+				attr := xmpp.ToMap(element.Attr)
+				if attr["type"] != "groupchat" {
+					continue
+				}
+
+				c.receivedMessage <- &Message{
+					From: attr["from"],
+					To:   attr["to"],
+					Body: c.connection.Body(),
+				}
+			}
+		*/
+		elem, err := c.connection.NextElement()
 		if err != nil {
 			return
 		}
+		elem.Print()
 
-		switch element.Name.Local + element.Name.Space {
-		case "iq" + xmpp.NsJabberClient: // rooms and rosters
-			query := c.connection.Query()
-			switch query.XMLName.Space {
-			case xmpp.NsDisco:
-				items := make([]*Room, len(query.Items))
-				for i, item := range query.Items {
-					items[i] = &Room{Id: item.Jid, Name: item.Name}
-				}
-				c.receivedRooms <- items
-			case xmpp.NsIqRoster:
-				items := make([]*User, len(query.Items))
-				for i, item := range query.Items {
-					items[i] = &User{Id: item.Jid, Name: item.Name, MentionName: item.MentionName}
-				}
-				c.receivedUsers <- items
-			}
-		case "message" + xmpp.NsJabberClient:
-			attr := xmpp.ToMap(element.Attr)
-			if attr["type"] != "groupchat" {
-				continue
-			}
-
-			c.receivedMessage <- &Message{
-				From: attr["from"],
-				To:   attr["to"],
-				Body: c.connection.Body(),
-			}
-		}
 	}
 }

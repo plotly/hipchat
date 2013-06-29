@@ -110,6 +110,62 @@ func (c *Conn) Next() (xml.StartElement, error) {
 	panic("unreachable")
 }
 
+// Read a next XML element
+func (c *Conn) NextElement() (topElem *Element, err error) {
+	var elem *Element = nil
+	for {
+		var t xml.Token
+		t, err = c.incoming.Token()
+		if err != nil {
+			return
+		}
+
+		switch t := t.(type) {
+		case xml.StartElement:
+			elem = NewElement(elem)
+			if topElem == nil {
+				topElem = elem
+			}
+			if t.Name.Local == "" {
+				err = errors.New("invalid xml response")
+				return
+			}
+			elem.StartElement = &t
+		case xml.EndElement:
+			if elem == nil {
+				continue
+			}
+			elem.EndElement = &t
+			elem = elem.Parent
+			if elem == nil {
+				// Top level elem ends
+				return
+			}
+		case xml.CharData:
+			if elem == nil {
+				continue
+			}
+			elem.CharData = &t
+		case xml.Comment:
+			if elem == nil {
+				continue
+			}
+			elem.Comment = &t
+		case xml.ProcInst:
+			if elem == nil {
+				continue
+			}
+			elem.ProcInst = &t
+		case xml.Directive:
+			if elem == nil {
+				continue
+			}
+			elem.Directive = &t
+		}
+	}
+	panic("unreachable")
+}
+
 func (c *Conn) Discover(from, to string) {
 	fmt.Fprintf(c.outgoing, xmlIqGet, from, to, id(), NsDisco)
 }
