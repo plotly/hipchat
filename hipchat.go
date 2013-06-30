@@ -3,6 +3,7 @@ package hipchat
 import (
 	"errors"
 	"github.com/tkawachi/hipchat/xmpp"
+	"log"
 	"time"
 )
 
@@ -25,14 +26,6 @@ type Client struct {
 	receivedUsers   chan []*User
 	receivedRooms   chan []*Room
 	receivedMessage chan *Message
-}
-
-// A Message represents a message received from HipChat.
-type Message struct {
-	From        string
-	To          string
-	Body        string
-	MentionName string
 }
 
 // A User represents a member of the HipChat service.
@@ -213,7 +206,22 @@ func (c *Client) listen() {
 		if err != nil {
 			return
 		}
-		elem.Print()
+		//log.Println(elem)
+		element := elem.StartElement
+		switch element.Name.Local + element.Name.Space {
+		case "message" + xmpp.NsJabberClient:
+			attr := xmpp.ToMap(element.Attr)
+			if attr["type"] != "groupchat" && attr["type"] != "chat" {
+				continue
+			}
+			for _, child := range elem.Children {
+				if child == nil {
+					continue
+				}
+				log.Println(child.StartElement.Name.Local)
+				log.Println(child.CharData)
+			}
+		}
 
 	}
 }

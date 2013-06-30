@@ -130,12 +130,12 @@ func (c *Conn) NextElement() (topElem *Element, err error) {
 				err = errors.New("invalid xml response")
 				return
 			}
-			elem.StartElement = &t
+			elem.StartElement = t
 		case xml.EndElement:
 			if elem == nil {
 				continue
 			}
-			elem.EndElement = &t
+			elem.EndElement = t
 			elem = elem.Parent
 			if elem == nil {
 				// Top level elem ends
@@ -145,22 +145,22 @@ func (c *Conn) NextElement() (topElem *Element, err error) {
 			if elem == nil {
 				continue
 			}
-			elem.CharData = &t
+			elem.CharData = string(t)
 		case xml.Comment:
 			if elem == nil {
 				continue
 			}
-			elem.Comment = &t
+			elem.Comment = t
 		case xml.ProcInst:
 			if elem == nil {
 				continue
 			}
-			elem.ProcInst = &t
+			elem.ProcInst = t
 		case xml.Directive:
 			if elem == nil {
 				continue
 			}
-			elem.Directive = &t
+			elem.Directive = t
 		}
 	}
 	panic("unreachable")

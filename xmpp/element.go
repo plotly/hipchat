@@ -2,16 +2,16 @@ package xmpp
 
 import (
 	"encoding/xml"
-	"log"
+	"fmt"
 )
 
 type Element struct {
-	StartElement *xml.StartElement
-	EndElement   *xml.EndElement
-	CharData     *xml.CharData
-	Comment      *xml.Comment
-	ProcInst     *xml.ProcInst
-	Directive    *xml.Directive
+	StartElement xml.StartElement
+	EndElement   xml.EndElement
+	CharData     string
+	Comment      xml.Comment
+	ProcInst     xml.ProcInst
+	Directive    xml.Directive
 	Children     []*Element
 	Parent       *Element
 }
@@ -26,17 +26,22 @@ func NewElement(parent *Element) *Element {
 	return elem
 }
 
-func (elem *Element) Print() {
-	log.Println("(")
-	log.Println(*elem.StartElement)
-	if elem.CharData != nil {
-		log.Println(string(*elem.CharData))
+func (elem *Element) String() string {
+	result := fmt.Sprintf("(start:%v", elem.StartElement)
+	charData := elem.CharData
+	if charData != "" {
+		result += fmt.Sprintf(", charData:%v", charData)
 	}
-	for _, child := range elem.Children {
-		if child == nil {
-			continue
+	if len(elem.Children) > 0 {
+		result += ", children:("
+		for _, child := range elem.Children {
+			if child == nil {
+				continue
+			}
+			result += child.String()
 		}
-		child.Print()
+		result += ")"
 	}
-	log.Println(")")
+	result += ")"
+	return result
 }
