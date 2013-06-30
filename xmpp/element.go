@@ -26,6 +26,40 @@ func NewElement(parent *Element) *Element {
 	return elem
 }
 
+func (elem *Element) Name() xml.Name {
+	return elem.StartElement.Name
+}
+
+func (elem *Element) NameWithSpace() string {
+	return elem.Name().Local + elem.Name().Space
+}
+
+func (elem *Element) AttrMap() map[string]string {
+	return ToMap(elem.StartElement.Attr)
+}
+
+func (elem *Element) IsMessage() bool {
+	if elem.NameWithSpace() != "message"+NsJabberClient {
+		return false
+	}
+	attr := elem.AttrMap()
+	return attr["type"] == "groupchat" || attr["type"] == "chat"
+}
+
+type elemMatcher func(*Element) bool
+
+func (elem *Element) FindChild(matcher elemMatcher) *Element {
+	for _, child := range elem.Children {
+		if child == nil {
+			continue
+		}
+		if matcher(child) {
+			return child
+		}
+	}
+	return nil
+}
+
 func (elem *Element) String() string {
 	result := fmt.Sprintf("(start:%v", elem.StartElement)
 	charData := elem.CharData

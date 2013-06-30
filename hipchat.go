@@ -3,7 +3,8 @@ package hipchat
 import (
 	"errors"
 	"github.com/tkawachi/hipchat/xmpp"
-	"log"
+	//"log"
+	"strings"
 	"time"
 )
 
@@ -106,8 +107,12 @@ func (c *Client) Join(roomId, resource string) {
 
 // Say accepts a room id, the name of the client in the room, and the message
 // body and sends the message to the HipChat room.
-func (c *Client) Say(roomId, name, body string) {
-	c.connection.MUCSend(roomId, c.Id+"/"+name, body)
+func (c *Client) Say(to, name, body string) {
+	if strings.Contains(to, conf) {
+		c.connection.MUCSend(to, c.Id+"/"+name, body)
+	} else {
+		c.connection.Send(to, c.Id+"/"+name, body)
+	}
 }
 
 // KeepAlive is meant to run as a goroutine. It sends a single whitespace
@@ -206,20 +211,10 @@ func (c *Client) listen() {
 		if err != nil {
 			return
 		}
-		//log.Println(elem)
-		element := elem.StartElement
-		switch element.Name.Local + element.Name.Space {
-		case "message" + xmpp.NsJabberClient:
-			attr := xmpp.ToMap(element.Attr)
-			if attr["type"] != "groupchat" && attr["type"] != "chat" {
-				continue
-			}
-			for _, child := range elem.Children {
-				if child == nil {
-					continue
-				}
-				log.Println(child.StartElement.Name.Local)
-				log.Println(child.CharData)
+		if elem.IsMessage() {
+			msg := NewMessage(elem)
+			if msg != nil {
+				c.receivedMessage <- msg
 			}
 		}
 
