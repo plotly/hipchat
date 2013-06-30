@@ -5,6 +5,7 @@ import (
 	"github.com/tkawachi/hipchat/xmpp"
 	"log"
 	"time"
+	"strings"
 )
 
 type Delay struct {
@@ -44,7 +45,8 @@ func NewMessage(elem *xmpp.Element) (msg *Message) {
 	if delay != nil {
 		d := new(Delay)
 		delayAttr := delay.AttrMap()
-		stamp, err := time.Parse(time.RFC3339, delayAttr["stamp"])
+		stampStr := strings.Split(delayAttr["stamp"], " ")[0]
+		stamp, err := time.Parse(time.RFC3339, stampStr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -53,6 +55,14 @@ func NewMessage(elem *xmpp.Element) (msg *Message) {
 		msg.Delay = d
 	}
 	return
+}
+
+func (msg *Message) FromNick() string {
+	slice := strings.Split(msg.From, "/")
+	if len(slice) < 2 {
+		return ""
+	}
+	return slice[1]
 }
 
 func (msg *Message) String() string {
