@@ -3,6 +3,8 @@ package hipchat
 import (
 	"errors"
 	"github.com/tkawachi/hipchat/xmpp"
+	//"log"
+	"strings"
 	"time"
 )
 
@@ -25,14 +27,6 @@ type Client struct {
 	receivedUsers   chan []*User
 	receivedRooms   chan []*Room
 	receivedMessage chan *Message
-}
-
-// A Message represents a message received from HipChat.
-type Message struct {
-	From        string
-	To          string
-	Body        string
-	MentionName string
 }
 
 // A User represents a member of the HipChat service.
@@ -113,8 +107,12 @@ func (c *Client) Join(roomId, resource string) {
 
 // Say accepts a room id, the name of the client in the room, and the message
 // body and sends the message to the HipChat room.
-func (c *Client) Say(roomId, name, body string) {
-	c.connection.MUCSend(roomId, c.Id+"/"+name, body)
+func (c *Client) Say(to, name, body string) {
+	if strings.Contains(to, conf) {
+		c.connection.MUCSend(to, c.Id+"/"+name, body)
+	} else {
+		c.connection.Send(to, c.Id+"/"+name, body)
+	}
 }
 
 // KeepAlive is meant to run as a goroutine. It sends a single whitespace
@@ -173,39 +171,52 @@ func (c *Client) authenticate() error {
 
 func (c *Client) listen() {
 	for {
-		element, err := c.connection.Next()
+		/*
+			element, err := c.connection.Next()
+			if err != nil {
+				return
+			}
+
+			switch element.Name.Local + element.Name.Space {
+			case "iq" + xmpp.NsJabberClient: // rooms and rosters
+				query := c.connection.Query()
+				switch query.XMLName.Space {
+				case xmpp.NsDisco:
+					items := make([]*Room, len(query.Items))
+					for i, item := range query.Items {
+						items[i] = &Room{Id: item.Jid, Name: item.Name}
+					}
+					c.receivedRooms <- items
+				case xmpp.NsIqRoster:
+					items := make([]*User, len(query.Items))
+					for i, item := range query.Items {
+						items[i] = &User{Id: item.Jid, Name: item.Name, MentionName: item.MentionName}
+					}
+					c.receivedUsers <- items
+				}
+			case "message" + xmpp.NsJabberClient:
+				attr := xmpp.ToMap(element.Attr)
+				if attr["type"] != "groupchat" {
+					continue
+				}
+
+				c.receivedMessage <- &Message{
+					From: attr["from"],
+					To:   attr["to"],
+					Body: c.connection.Body(),
+				}
+			}
+		*/
+		elem, err := c.connection.NextElement()
 		if err != nil {
 			return
 		}
-
-		switch element.Name.Local + element.Name.Space {
-		case "iq" + xmpp.NsJabberClient: // rooms and rosters
-			query := c.connection.Query()
-			switch query.XMLName.Space {
-			case xmpp.NsDisco:
-				items := make([]*Room, len(query.Items))
-				for i, item := range query.Items {
-					items[i] = &Room{Id: item.Jid, Name: item.Name}
-				}
-				c.receivedRooms <- items
-			case xmpp.NsIqRoster:
-				items := make([]*User, len(query.Items))
-				for i, item := range query.Items {
-					items[i] = &User{Id: item.Jid, Name: item.Name, MentionName: item.MentionName}
-				}
-				c.receivedUsers <- items
-			}
-		case "message" + xmpp.NsJabberClient:
-			attr := xmpp.ToMap(element.Attr)
-			if attr["type"] != "groupchat" {
-				continue
-			}
-
-			c.receivedMessage <- &Message{
-				From: attr["from"],
-				To:   attr["to"],
-				Body: c.connection.Body(),
+		if elem.IsMessage() {
+			msg := NewMessage(elem)
+			if msg != nil {
+				c.receivedMessage <- msg
 			}
 		}
+
 	}
 }

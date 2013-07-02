@@ -27,6 +27,7 @@ const (
 	xmlPresence    = "<presence from='%s'><show>%s</show></presence>"
 	xmlMUCPresence = "<presence id='%s' to='%s' from='%s'><x xmlns='%s'/></presence>"
 	xmlMUCMessage  = "<message from='%s' id='%s' to='%s' type='groupchat'><body>%s</body></message>"
+	xmlMessage     = "<message from='%s' id='%s' to='%s' type='chat'><body>%s</body></message>"
 )
 
 type required struct{}
@@ -110,6 +111,62 @@ func (c *Conn) Next() (xml.StartElement, error) {
 	panic("unreachable")
 }
 
+// Read a next XML element
+func (c *Conn) NextElement() (topElem *Element, err error) {
+	var elem *Element = nil
+	for {
+		var t xml.Token
+		t, err = c.incoming.Token()
+		if err != nil {
+			return
+		}
+
+		switch t := t.(type) {
+		case xml.StartElement:
+			elem = NewElement(elem)
+			if topElem == nil {
+				topElem = elem
+			}
+			if t.Name.Local == "" {
+				err = errors.New("invalid xml response")
+				return
+			}
+			elem.StartElement = t
+		case xml.EndElement:
+			if elem == nil {
+				continue
+			}
+			elem.EndElement = t
+			elem = elem.Parent
+			if elem == nil {
+				// Top level elem ends
+				return
+			}
+		case xml.CharData:
+			if elem == nil {
+				continue
+			}
+			elem.CharData = string(t)
+		case xml.Comment:
+			if elem == nil {
+				continue
+			}
+			elem.Comment = t
+		case xml.ProcInst:
+			if elem == nil {
+				continue
+			}
+			elem.ProcInst = t
+		case xml.Directive:
+			if elem == nil {
+				continue
+			}
+			elem.Directive = t
+		}
+	}
+	panic("unreachable")
+}
+
 func (c *Conn) Discover(from, to string) {
 	fmt.Fprintf(c.outgoing, xmlIqGet, from, to, id(), NsDisco)
 }
@@ -136,6 +193,10 @@ func (c *Conn) MUCPresence(roomId, jid string) {
 
 func (c *Conn) MUCSend(to, from, body string) {
 	fmt.Fprintf(c.outgoing, xmlMUCMessage, from, id(), to, html.EscapeString(body))
+}
+
+func (c *Conn) Send(to, from, body string) {
+	fmt.Fprintf(c.outgoing, xmlMessage, from, id(), to, html.EscapeString(body))
 }
 
 func (c *Conn) Roster(from, to string) {
