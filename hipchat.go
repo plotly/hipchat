@@ -2,7 +2,7 @@ package hipchat
 
 import (
 	"errors"
-	"github.com/tkawachi/hipchat/xmpp"
+	"github.com/plotly/hipchat/xmpp"
 	//"log"
 	"strings"
 	"time"

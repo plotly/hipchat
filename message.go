@@ -2,10 +2,10 @@ package hipchat
 
 import (
 	"fmt"
-	"github.com/tkawachi/hipchat/xmpp"
+	"github.com/plotly/hipchat/xmpp"
 	"log"
-	"time"
 	"strings"
+	"time"
 )
 
 type Delay struct {
